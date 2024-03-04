@@ -1,6 +1,4 @@
 #Muzaffer Mahi Can, 10/02/2024
-#Ground assumptions: As the comet moves, it is assumed that in dt the acceleration is constant, as dt gets smaller the calculations are
-#slower but more accurate.
 
 import time
 import numpy as np
