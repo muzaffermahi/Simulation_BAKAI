@@ -75,7 +75,6 @@ for i in range(1, int(total_time/864000)):
     uranus_position = uranus.at(b_date).position.km
     neptun_position = neptun.at(b_date).position.km
     
-   #if (G*M_JUPITER*net_distance_jupiter[i]/np.linalg.norm(net_distance_jupiter[i])**3) > 1/10000000000
     net_distance_jupiter[0] = np.array(jupiter_position - vctr_position_ISON[0])
     net_distance_earth[0] = np.array(earth_position - vctr_position_ISON[0])
     net_distance_mars[0] = np.array(mars_position - vctr_position_ISON[0])
