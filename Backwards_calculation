@@ -1,0 +1,231 @@
+#Muzaffer Mahi Can, 07/07/2024
+#Rogue will enter earth in the date 23/05 to the position 24/05
+import multiprocessing
+import time
+import numpy as np
+import numba
+from numba import njit, prange
+import pandas as pd  
+import os
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image
+
+start_time = time.perf_counter() #Starts counting time untill code finishes
+
+dt = 720  #Time that acceleration is assumed to be constant, smaller is better
+
+total_time = 86400 * 365.24219/2   #Total simulation time.  43829*5770
+before_time = 86400 * 7
+
+#i = int(-before_time/dt) +1
+i = -1
+L = int(- before_time/dt) -1
+n = int(total_time/dt) -1
+
+#Define position-velocity-acceleraiton vectors for objects
+vctr_position_earth = np.zeros((int(total_time / dt), 3))
+vctr_velocity_earth = np.zeros((int(total_time / dt), 3))
+vctr_acceleration_earth = np.zeros((int(total_time / dt), 3))
+
+vctr_position_moon = np.zeros((int(total_time / dt), 3) )
+vctr_velocity_moon = np.zeros((int(total_time / dt), 3) )
+vctr_acceleration_moon = np.zeros((int(total_time / dt), 3))
+
+vctr_position_Rogue = np.zeros((int(total_time / dt), 3))
+vctr_velocity_Rogue = np.zeros((int(total_time / dt), 3))
+vctr_acceleration_Rogue = np.zeros((int(total_time / dt), 3))
+
+vctr_position_earth0 = np.zeros((int(total_time / dt), 3))
+vctr_velocity_earth0 = np.zeros((int(total_time / dt), 3))
+vctr_acceleration_earth0 = np.zeros((int(total_time / dt), 3))
+
+#Define the net distance between objects 
+net_distance_earth = np.zeros((int(total_time/dt)))
+net_distance_sun = np.zeros(int(total_time / dt))
+
+
+#Define the distances of floats to Rogue as norm
+norm_distance_earth = np.zeros(int(total_time/dt))
+
+
+#Beginning position and velocities for floats
+vctr_position_earth[0] = np.array([-7.071480235792764E+07 ,-1.350939694618657E+08 , 3.839140461005270E+04])#position of earth in 23/05
+vctr_velocity_earth[0] = np.array([2.596896679923982E+01 ,-1.381239717656313E+01 , 1.173766009551436E-03])
+
+#vctr_position_earth[0] = np.array([8.223111711762024E+07 , 1.215841863954314E+08, 1.984305127655715E+04])#position of earth in 18/11
+#vctr_velocity_earth[0] = np.array([-2.509596401990009E+01 ,1.662572539721182E+01 ,-1.262308045668625E-03])#v of earth in 18/11
+
+#vctr_position_Rogue[0] = np.array([-9.29571283e+07 ,-1.08906733e+08 , 2.93230435e+06]) #for position of Rogue 1 week before
+#vctr_position_Rogue[0] = np.array([-8.192430073178585E+07 ,-1.272173964759768E+08 , 7.450193614929914E+03]) #for position of earth 2 days later
+#vctr_position_Rogue[0] = np.array([-7.979069907052615E+07 ,-1.286013791239102E+08 , 7.604837871909142E+03]) #for position of earth 3 days later
+#vctr_position_Rogue[0] = np.array([-7.103668121693499E+07 ,-1.337669136103462E+08 , 8.188007626526058E+03]) #for position of earth 7 days later
+#vctr_position_Rogue[0] = np.array([-5.496568090604365E+07 ,-1.413345036924672E+08 ,8.525417193897069E+03]) #for position of earth 14 days later
+#vctr_position_Rogue[0] = np.array([-1.319819903425781E+07 ,-1.513925089860717E+08 , 8.589958537250757E+03]) #for position of earth 30 days later
+#vctr_position_Rogue[0] = np.array([6.094786707637349E+07 ,-1.393001112076881E+08 , 7.739797480605543E+03]) #for position of earth 60 days later
+#vctr_position_Rogue[0] = np.array([1.214435411459364E+08 ,-9.054815377135754E+07 , 4.820373744789511E+03]) #for position of earth 90 days later
+#vctr_position_Rogue[0] = np.array([8.742188518307206E+07 , 1.193449153176520E+08 ,-7.527354944825172E+03]) #for position of earth 180 days later
+
+vctr_position_Rogue[0] = np.array([-6.846131302380720E+07 ,-1.362682468473938E+08 , 3.848300782818347E+04]) #for position of Rogue for 1 DE
+
+
+
+
+#vctr_position_Rogue[0] = np.array([-8.818337040722354E+07 ,-1.228484260446720E+08 ,7.029978363126516E+03]) #for position of earth 1 days before
+#vctr_position_Rogue[0] = np.array([-9.022038588781440E+07 ,-1.213209355395642E+08 , 6.915897220477462E+03]) #for position of earth 2 days before
+#vctr_position_Rogue[0] = np.array([-9.223167767309256E+07 ,-1.197584820731025E+08 , 6.819371136724949E+03]) #for position of earth 3 days before
+#vctr_position_Rogue[0] = np.array([-1.000068934234605E+08 ,-1.131672348613059E+08 ,6.629221336528659E+03]) #for position of earth 7 days before
+#vctr_position_Rogue[0] = np.array([-1.124791467232912E+08 ,-1.003925544373185E+08 ,6.618546401634812E+03]) #for position of earth 14 days before
+#vctr_position_Rogue[0] = np.array([-1.347420089498982E+08 ,-6.619742231023830E+07 , 4.058246728911996E+03]) #for position of earth 30 days before
+#vctr_position_Rogue[0] = np.array([-1.483654070306365E+08 , 1.151996098812809E+07 ,-1.175750363627449E+02]) #for position of earth 60 days before
+#vctr_position_Rogue[0] = np.array([-1.231683560818112E+08 , 8.163650988794616E+07 ,-4.031621533934027E+03]) #for position of earth 90 days before
+
+
+vctr_velocity_Rogue[0] = np.array([1.176261267381250E+01,-3.023110865122838E+01,-4.772431731046794])
+
+vctr_position_earth0[0] = np.array([-8.612126415163520E+07 ,-1.243405742161587E+08 , 7.159140121236444E+03])
+vctr_velocity_earth0[0] = np.array([2.400973596546069E+01 ,-1.706428457849702E+01 , 1.571000011289847E-03])
+
+
+
+
+#Define constants
+G = 0.00000000000000000006674
+M_SUN = float(1989000000000000000000000000000)
+M_JUPITER = 1898130000000000000000000000
+M_earth = float(5972200000000000000000000)
+M_MARS = 639000000000000000000000
+M_VENUS = 4800000000000000000000000
+M_mercury = 328500000000000000000000
+M_SATURN = 5683 * 10**23
+M_URANUS = 8681 * 10**22
+M_NEPTUNE = 10**26
+M_Rogue = float(15 * M_JUPITER)
+M_Moon = 7.34767309 * 10**22
+
+#Create a list to append distaxnces from floats
+net_distance_sun_lst = []
+net_distance_earth_lst = []
+net_distance_mars_lst = []
+net_distance_venus_lst = []
+net_distance_jupiter_lst = []
+net_distance_saturn_lst = []
+net_distance_uranus_lst = []
+net_distance_neptune_lst = []
+net_distance_mercury_lst = []
+
+bruh = False
+
+
+while(i>L):
+
+    vctr_acceleration_Rogue[i] = (-G*M_SUN*vctr_position_Rogue[i+1]/np.linalg.norm(vctr_position_Rogue[i+1])**3
+                                  -G*M_earth*(vctr_position_Rogue[i+1]-vctr_position_earth[i+1])/np.linalg.norm(vctr_position_Rogue[i+1]-vctr_position_earth[i+1])**3
+                                  )
+    vctr_velocity_Rogue[i] = (vctr_velocity_Rogue[i+1] + vctr_acceleration_Rogue[i+1]*dt)
+
+    vctr_position_Rogue[i] = (vctr_position_Rogue[i+1] - vctr_velocity_Rogue[i+1]*dt - 0.5*vctr_acceleration_Rogue[i+1]*dt**2)
+
+    vctr_acceleration_earth[i] = (-G*M_SUN*vctr_position_earth[i+1]/np.linalg.norm(vctr_position_earth[i+1]**3)
+                                  -G*M_Rogue*(vctr_position_earth[i+1]-vctr_position_Rogue[i+1])/(np.linalg.norm(vctr_position_earth[i+1]-vctr_position_Rogue[i+1])**3)
+                                  )
+    vctr_velocity_earth[i] = (vctr_velocity_earth[i+1] + vctr_acceleration_earth[i+1]*dt)
+
+    vctr_position_earth[i] = (vctr_position_earth[i+1] - vctr_velocity_earth[i+1]*dt - 0.5*vctr_acceleration_earth[i+1]*dt**2)
+    i -= 1
+    print(f"distance between earth and rogue:{np.linalg.norm(vctr_position_earth[i+1]-vctr_position_Rogue[i+1])}")
+    if np.linalg.norm(vctr_position_earth[i]-vctr_position_Rogue[i]) < 5000:
+        if i > -100:
+            
+            print(f"Earth and rogue collided i {i}")
+
+
+
+
+
+ 
+"""
+
+#Calculate positions of Rogue and distances from floats for Total Time
+@njit
+def compute_position(total_time, dt, G, M_SUN, M_earth, vctr_position_Rogue, vctr_velocity_Rogue, vctr_acceleration_Rogue, vctr_position_earth, vctr_velocity_earth, vctr_acceleration_earth,
+                     vctr_position_earth0, vctr_velocity_earth0, vctr_acceleration_earth0
+                     ):
+        
+    
+        
+    for n in prange(1, int(total_time/dt)):
+        vctr_acceleration_Rogue[n] =(- G * M_SUN* vctr_position_Rogue[n-1]/(np.linalg.norm(vctr_position_Rogue[n-1])**3) 
+        - G * M_earth * (vctr_position_Rogue[n-1]-vctr_position_earth[n-1])/(np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_earth[n-1])**3) 
+        )
+
+        vctr_velocity_Rogue[n] = vctr_velocity_Rogue[n-1] + vctr_acceleration_Rogue[n-1]*dt
+        vctr_position_Rogue[n] = vctr_position_Rogue[n-1] + vctr_velocity_Rogue[n-1]*dt + 0.5*dt**2*vctr_acceleration_Rogue[n-1]
+
+        
+
+        vctr_acceleration_earth[n] = (- G * M_SUN * vctr_position_earth[n-1]/np.linalg.norm(vctr_position_earth[n-1])**3
+       - G * M_Rogue * (vctr_position_earth[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_earth[n-1] - vctr_position_Rogue[n-1])**3)
+            )
+        vctr_velocity_earth[n] = vctr_velocity_earth[n-1] + vctr_acceleration_earth[n-1]*dt
+        vctr_position_earth[n] = vctr_position_earth[n-1] + vctr_velocity_earth[n-1]*dt + 0.5*(dt**2)*vctr_acceleration_earth[n-1]
+
+
+        vctr_acceleration_earth0[n] = (-G * M_SUN * vctr_position_earth0[n-1]/np.linalg.norm(vctr_position_earth0[n-1])**3)
+        vctr_velocity_earth0[n] = vctr_velocity_earth0[n-1] + vctr_acceleration_earth0[n-1]*dt
+        vctr_position_earth0[n] = vctr_position_earth0[n-1] + vctr_velocity_earth0[n-1]*dt + 0.5*dt**2*vctr_acceleration_earth0[n-1]
+
+        if np.linalg.norm(vctr_position_earth[n] - vctr_position_Rogue[n]) < 10000:
+            print("Rogue and Earth collided")
+            bruh = True
+        if 700< n < 730:
+            print (np.linalg.norm(vctr_position_Rogue[n]-vctr_position_earth[n]))
+
+compute_position(total_time, dt, G, M_SUN, M_earth, vctr_position_Rogue, vctr_velocity_Rogue, vctr_acceleration_Rogue, vctr_position_earth, vctr_velocity_earth, vctr_acceleration_earth
+                 ,vctr_position_earth0, vctr_velocity_earth0, vctr_acceleration_earth0
+                 )
+"""
+
+
+
+# Eğer klasör yoksa oluştur
+output_dir = "backwards_simulation_photos"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Benzersiz bir dosya ismi oluştur
+plot_number = len(os.listdir(output_dir)) + 1
+file_name = f"plot_{plot_number}.png"
+file_path = os.path.join(output_dir, file_name)
+
+
+# Görseli göster
+
+print(f"Rogue_position_first: {vctr_position_Rogue[L+1]}")
+print(f"Rogue_velocity_f,rst:{vctr_velocity_Rogue[L+1]}")
+print(f"Distance between earth and rogue{np.linalg.norm(vctr_position_earth[1500]-vctr_position_Rogue[1500])}")
+
+# Mevcut Excel dosyasının varlığını kontrol et ve oku
+file_path = 'backwards_simulation_results.xlsx'
+
+if os.path.exists(file_path):
+    existing_df = pd.read_excel(file_path)
+else:
+    existing_df = pd.DataFrame()
+
+# Yeni verileri ekleyin
+new_data = {
+    'Rogue_position_16/05': [vctr_position_Rogue[L+1].tolist()],
+    'Rogue_velocity_16/05': [vctr_velocity_Rogue[L+1].tolist()],
+    'Total_time_days': [total_time / 86400]
+}
+
+new_df = pd.DataFrame(new_data)
+
+# Mevcut verilerle yeni verileri birleştirin
+combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+# Excel dosyasına yaz
+with pd.ExcelWriter(file_path, engine='openpyxl', mode='w') as writer:
+    combined_df.to_excel(writer, index=False)
+
+
