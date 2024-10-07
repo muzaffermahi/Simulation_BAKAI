@@ -23,14 +23,11 @@ from math import sin, cos, tan, acos
 from joblib import Parallel,delayed 
 from concurrent.futures import ProcessPoolExecutor
 
-#from mpi4py import MPI
-
-
 start_time = time.perf_counter() # Starts counting time untill code finishes
 
-dt = 720  # Time that acceleration is assumed to be constant, smaller is better
+dt = 7200 # Time that acceleration is assumed to be constant, smaller is better
 
-total_time = 86400 * 365.24219 *4  # Total simulation time in seconds
+total_time = 86400 * 365.24219/1200  # Total simulation time in seconds
 
 n = int(total_time/dt) -1
 
@@ -84,6 +81,9 @@ vctr_acceleration_neptune = np.zeros((int(total_time / dt), 3))
 vctr_position_earth[0] = np.array([-8.720402184155567E+07 , -1.249081082441206E+08 , 3.737986027865112E+04]) #16/05/2024, 00:00
 vctr_velocity_earth[0] = np.array([2.401992974509115E+01 , -1.707462009431704E+01 ,1.433502989955038E-03]) #16/05/2024, 00:00
 
+vctr_position_Rogue[0] = np.array([-8.720402184155567E+07 , -1.249081082441206E+08 , 3.737986027865112E+05]) 
+vctr_velocity_Rogue[0] = np.array([2.401992974509115E+01 , -1.707462009431704E+01 ,1.433502989955038E-03]) 
+
 vctr_position_earth0[0] = np.array([-8.612126415163520E+07 ,-1.243405742161587E+08 , 7.159140121236444E+03])
 vctr_velocity_earth0[0] = np.array([2.400973596546069E+01 ,-1.706428457849702E+01 , 1.571000011289847E-03])
 
@@ -127,6 +127,16 @@ M_Moon = float(7.34767309 * 10**22)
 R_earth = 6371 
 R_moon = 1737
 
+GM_SUN = float(G*M_SUN)
+GM_JUPITER = float(G*M_JUPITER)
+GM_earth = float(G*M_earth)
+GM_MARS = float(G*M_MARS)
+GM_VENUS = float(G*M_VENUS)
+GM_mercury = float(G*M_mercury)
+GM_SATURN = G*M_SATURN
+GM_URANUS = G*M_URANUS
+GM_Moon = G*M_Moon
+GM_Rogue = G*M_Rogue
 
 Roche_limit_Rogue_Earth = int(R_earth*(2*M_Rogue/M_earth)**(1/3))
 Roche_limit_Rogue_Earth_check = False
@@ -151,12 +161,12 @@ def CalcRogue(n, vctr_position_Rogue, vctr_velocity_Rogue, vctr_acceleration_Rog
                          vctr_position_mercury, vctr_position_jupiter, M_SUN, M_earth, M_VENUS, 
                          M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
             vctr_acceleration_Rogue[n] = (- G * M_SUN* vctr_position_Rogue[n-1]/np.linalg.norm(vctr_position_Rogue[n-1])**3
-            - G * M_earth * (vctr_position_Rogue[n-1]-vctr_position_earth[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_earth[n-1])**3
-            - G * M_VENUS * (vctr_position_Rogue[n-1]-vctr_position_venus[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_venus[n-1])**3
-            - G * M_MARS * (vctr_position_Rogue[n-1]-vctr_position_mars[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_mars[n-1])**3
-            - G * M_mercury * (vctr_position_Rogue[n-1]-vctr_position_mercury[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_mercury[n-1])**3
-            - G * M_JUPITER* (vctr_position_Rogue[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_jupiter[n-1])**3
-            - G * M_Moon* (vctr_position_Rogue[n-1]-vctr_position_moon[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_moon[n-1])**3
+            - GM_earth * (vctr_position_Rogue[n-1]-vctr_position_earth[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_earth[n-1])**3
+            - GM_VENUS * (vctr_position_Rogue[n-1]-vctr_position_venus[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_venus[n-1])**3
+            - GM_MARS * (vctr_position_Rogue[n-1]-vctr_position_mars[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_mars[n-1])**3
+            - GM_mercury * (vctr_position_Rogue[n-1]-vctr_position_mercury[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_mercury[n-1])**3
+            - GM_JUPITER* (vctr_position_Rogue[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_jupiter[n-1])**3
+            - GM_Moon* (vctr_position_Rogue[n-1]-vctr_position_moon[n-1])/np.linalg.norm(vctr_position_Rogue[n-1]-vctr_position_moon[n-1])**3
             )
             vctr_velocity_Rogue[n] = vctr_velocity_Rogue[n-1] + vctr_acceleration_Rogue[n-1]*dt
             vctr_position_Rogue[n] = vctr_position_Rogue[n-1] + vctr_velocity_Rogue[n-1]*dt + 0.5*dt**2*vctr_acceleration_Rogue[n-1]
@@ -167,47 +177,100 @@ def CalcEarth(n, vctr_position_Rogue, vctr_velocity_Rogue, vctr_acceleration_Rog
                          M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
 
         vctr_acceleration_earth[n] = (
-        - G * M_SUN * vctr_position_earth[n-1]/np.linalg.norm(vctr_position_earth[n-1])**3   
-        - G * M_mercury*(vctr_position_earth[n-1] - vctr_position_mercury[n-1])/np.linalg.norm(vctr_position_earth[n-1] - vctr_position_mercury[n-1])**3
-        - G * M_VENUS * (vctr_position_earth[n-1]-vctr_position_venus[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_venus[n-1])**3
-        - G * M_MARS * (vctr_position_earth[n-1]-vctr_position_mars[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_mars[n-1])**3
-        - G * M_JUPITER* (vctr_position_earth[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_jupiter[n-1])**3
-        - G * M_SATURN *(vctr_position_earth[n-1]-vctr_position_saturn[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_saturn[n-1])**3
-        - G * M_Moon* (vctr_position_earth[n-1] - vctr_position_moon[n-1])/np.linalg.norm(vctr_position_earth[n-1] - vctr_position_moon[n-1])**3
-        - G * M_Rogue* (vctr_position_earth[n-1] - vctr_position_Rogue[n-1])/np.linalg.norm(vctr_position_earth[n-1] - vctr_position_Rogue[n-1])**3
+        - GM_SUN * vctr_position_earth[n-1]/np.linalg.norm(vctr_position_earth[n-1])**3   
+        - GM_mercury*(vctr_position_earth[n-1] - vctr_position_mercury[n-1])/np.linalg.norm(vctr_position_earth[n-1] - vctr_position_mercury[n-1])**3
+        - GM_VENUS * (vctr_position_earth[n-1]-vctr_position_venus[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_venus[n-1])**3
+        - GM_MARS * (vctr_position_earth[n-1]-vctr_position_mars[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_mars[n-1])**3
+        - GM_JUPITER* (vctr_position_earth[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_jupiter[n-1])**3
+        - GM_SATURN *(vctr_position_earth[n-1]-vctr_position_saturn[n-1])/np.linalg.norm(vctr_position_earth[n-1]-vctr_position_saturn[n-1])**3
+        - GM_Moon* (vctr_position_earth[n-1] - vctr_position_moon[n-1])/np.linalg.norm(vctr_position_earth[n-1] - vctr_position_moon[n-1])**3
+        - GM_Rogue* (vctr_position_earth[n-1] - vctr_position_Rogue[n-1])/np.linalg.norm(vctr_position_earth[n-1] - vctr_position_Rogue[n-1])**3
             )
 
         vctr_velocity_earth[n] = vctr_velocity_earth[n-1] + vctr_acceleration_earth[n-1]*dt
         vctr_position_earth[n] = vctr_position_earth[n-1] + vctr_velocity_earth[n-1]*dt + 0.5*dt**2*vctr_acceleration_earth[n-1]
         return vctr_position_earth, vctr_velocity_earth, vctr_acceleration_earth
- #Calculate positions of Rogue and distances from floats for Total Time
-def compute_position(min_distance,min_distance_Rogue_moon,max_distance_Earth_moon,
-                    sub,total_time, dt, G, M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_SATURN, M_NEPTUNE, M_URANUS, M_Rogue, M_Moon,
-                    vctr_position_moon, vctr_velocity_moon, vctr_acceleration_moon, 
-                    vctr_position_Rogue, vctr_velocity_Rogue, vctr_acceleration_Rogue, 
-                    vctr_position_earth, vctr_velocity_earth, vctr_acceleration_earth,
-                    vctr_position_venus, vctr_velocity_venus, vctr_acceleration_venus,
-                    vctr_position_mars, vctr_velocity_mars, vctr_acceleration_mars,
-                    vctr_position_mercury, vctr_velocity_mercury, vctr_acceleration_mercury,
-                    vctr_position_jupiter, vctr_velocity_jupiter, vctr_acceleration_jupiter,
-                    vctr_position_saturn, vctr_velocity_saturn, vctr_acceleration_saturn,
-                    vctr_position_neptune, vctr_velocity_neptune, vctr_acceleration_neptune,
-                    vctr_position_uranus, vctr_velocity_uranus, vctr_acceleration_uranus,
-                    vctr_position_earth0, vctr_velocity_earth0, vctr_acceleration_earth0,
-                    Roche_limit_Rogue_Moon_check,Roche_limit_Earth_Moon_check ,Roche_limit_Rogue_Earth_check,
-                    Roche_limit_Rogue_Moon, Roche_limit_Earth_Moon, Roche_limit_Rogue_Earth, vctr_velocity_Rogue_Z
-                    ): 
+
+
+def CalcMoon(n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
+    vctr_acceleration_moon[n] = (- GM_SUN * vctr_position_moon[n-1]/np.linalg.norm(vctr_position_moon[n-1])**3
+    - GM_Rogue* (vctr_position_moon[n-1] - vctr_position_Rogue[n-1])/np.linalg.norm(vctr_position_moon[n-1] - vctr_position_Rogue[n-1])**3
+    - GM_earth*(vctr_position_moon[n-1] - vctr_position_earth[n-1])/np.linalg.norm(vctr_position_moon[n-1] - vctr_position_earth[n-1])**3
+        )
+    vctr_velocity_moon[n] = vctr_velocity_moon[n-1] + vctr_acceleration_moon[n-1]*dt
+    vctr_position_moon[n] = vctr_position_moon[n-1] + vctr_velocity_moon[n-1]*dt + 0.5*dt**2*vctr_acceleration_moon[n-1]
+    return vctr_position_moon, vctr_velocity_moon,vctr_acceleration_moon
+
+def CalcEarth0(n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
+    vctr_acceleration_earth0[n] = (-GM_SUN * vctr_position_earth0[n-1]/np.linalg.norm(vctr_position_earth0[n-1])**3
+    - GM_VENUS * (vctr_position_earth0[n-1]-vctr_position_venus[n-1])/np.linalg.norm(vctr_position_earth0[n-1]-vctr_position_venus[n-1])**3
+    - GM_MARS * (vctr_position_earth0[n-1]-vctr_position_mars[n-1])/(np.linalg.norm(vctr_position_earth0[n-1]-vctr_position_mars[n-1])**3)
+    - GM_JUPITER* (vctr_position_earth0[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_earth0[n-1]-vctr_position_jupiter[n-1])**3)
+    vctr_velocity_earth0[n] = vctr_velocity_earth0[n-1] + vctr_acceleration_earth0[n-1]*dt
+    vctr_position_earth0[n] = vctr_position_earth0[n-1] + vctr_velocity_earth0[n-1]*dt + 0.5*dt**2*vctr_acceleration_earth0[n-1]
+    return vctr_acceleration_earth0, vctr_position_earth0, vctr_velocity_earth0
+
+
+def CalcVenus(n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
     
-    min_distance_Earth_moon = float('inf')
-    min_distance_Rogue_moon= float('inf')
-    min_distance_Earth_moon = float('inf')
-    max_distance_Earth_moon = int(0)
+    vctr_acceleration_venus[n] = (- GM_SUN * vctr_position_venus[n-1]/np.linalg.norm(vctr_position_venus[n-1])**3
+    - GM_Rogue* (vctr_position_venus[n-1] - vctr_position_Rogue[n-1])/np.linalg.norm(vctr_position_venus[n-1] - vctr_position_Rogue[n-1])**3)
+    vctr_velocity_venus[n] = vctr_velocity_venus[n-1] + vctr_acceleration_venus[n-1]*dt
+    vctr_position_venus[n] = vctr_position_venus[n-1] + vctr_velocity_venus[n-1]*dt + 0.5*dt**2*vctr_acceleration_venus[n-1]
+    return vctr_position_venus, vctr_velocity_venus, vctr_acceleration_venus
+
+def CalcMars(n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
+    vctr_acceleration_mars[n] = (-GM_SUN * vctr_position_mars[n-1]/np.linalg.norm(vctr_position_mars[n-1])**3
+    - GM_JUPITER* (vctr_position_mars[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_mars[n-1]-vctr_position_jupiter[n-1])**3
+    - GM_Rogue* (vctr_position_mars[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_mars[n-1] - vctr_position_Rogue[n-1])**3))
+    vctr_velocity_mars[n] = vctr_velocity_mars[n-1] + vctr_acceleration_mars[n-1]*dt
+    vctr_position_mars[n] = vctr_position_mars[n-1] + vctr_velocity_mars[n-1]*dt + 0.5*dt**2*vctr_acceleration_mars[n-1]
+    return vctr_acceleration_mars,vctr_position_mars,vctr_velocity_mars
+
+def CalcMercury(n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
+    vctr_acceleration_mercury[n] = (-GM_SUN * vctr_position_mercury[n-1]/np.linalg.norm(vctr_position_mercury[n-1])**3
+    - GM_Rogue* (vctr_position_mercury[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_mercury[n-1] - vctr_position_Rogue[n-1])**3))
+    vctr_velocity_mercury[n] = vctr_velocity_mercury[n-1] + vctr_acceleration_mercury[n-1]*dt
+    vctr_position_mercury[n] = vctr_position_mercury[n-1] + vctr_velocity_mercury[n-1]*dt + 0.5*dt**2*vctr_acceleration_mercury[n-1]
+    return vctr_acceleration_mercury,vctr_position_mercury,vctr_velocity_mercury
+
+def CalcJupiter(n, vctr_position_Rogue, vctr_velocity_jupiter, 
+                                        vctr_acceleration_jupiter, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter,vctr_position_saturn, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt):
+        vctr_acceleration_jupiter[n] = (-GM_SUN * vctr_position_jupiter[n-1]/np.linalg.norm(vctr_position_jupiter[n-1])**3
+        - GM_SATURN *(vctr_position_jupiter[n-1]-vctr_position_saturn[n-1])/np.linalg.norm(vctr_position_jupiter[n-1]-vctr_position_saturn[n-1])**3
+        - GM_Rogue * (vctr_position_jupiter[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_jupiter[n-1] - vctr_position_Rogue[n-1])**3))
+        vctr_velocity_jupiter[n] = vctr_velocity_jupiter[n-1] + vctr_acceleration_jupiter[n-1]*dt
+        vctr_position_jupiter[n] = vctr_position_jupiter[n-1] + vctr_velocity_jupiter[n-1]*dt + 0.5*dt**2*vctr_acceleration_jupiter[n-1]
+        print(vctr_position_jupiter)
+        return vctr_acceleration_jupiter,vctr_position_jupiter,vctr_velocity_jupiter
+
+    
+min_distance_Earth_moon = float('inf')
+min_distance_Rogue_moon= float('inf')
+min_distance = float('inf')
+
+max_distance_Earth_moon = int(0)
     #One cannot break this for loop into different chunks of work and divide them among different cores
     #One idea I had was to make dt something like 720000, choose one of the positions as the next chunks beginning position, but it wouldn't work
 
-    for n in range(1, int(total_time/dt )):
-        #print(f"%{int(n/int(total_time/dt)*100)}")
-        
+for n in range(1, int(total_time/dt )):
 
         if __name__ ==  '__main__':
 
@@ -223,46 +286,43 @@ def compute_position(min_distance,min_distance_Rogue_moon,max_distance_Earth_moo
                                         vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
                                         vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
                                         M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
+            
+            with ProcessPoolExecutor() as executor:
+                future = executor.submit(CalcMoon,n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
+                
+            with ProcessPoolExecutor() as executor:
+                future = executor.submit(CalcEarth0,n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
+                
+            with ProcessPoolExecutor() as executor:
+                future = executor.submit(CalcVenus,n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
+                
+            with ProcessPoolExecutor() as executor:
+                future = executor.submit(CalcMars,n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
        
-
-        vctr_acceleration_moon[n] = (- G * M_SUN * vctr_position_moon[n-1]/np.linalg.norm(vctr_position_moon[n-1])**3
-        - G * M_Rogue* (vctr_position_moon[n-1] - vctr_position_Rogue[n-1])/np.linalg.norm(vctr_position_moon[n-1] - vctr_position_Rogue[n-1])**3
-        - G * M_earth*(vctr_position_moon[n-1] - vctr_position_earth[n-1])/np.linalg.norm(vctr_position_moon[n-1] - vctr_position_earth[n-1])**3
-        )
-        vctr_velocity_moon[n] = vctr_velocity_moon[n-1] + vctr_acceleration_moon[n-1]*dt
-        vctr_position_moon[n] = vctr_position_moon[n-1] + vctr_velocity_moon[n-1]*dt + 0.5*dt**2*vctr_acceleration_moon[n-1]
-
-    
-        vctr_acceleration_earth0[n] = (-G * M_SUN * vctr_position_earth0[n-1]/np.linalg.norm(vctr_position_earth0[n-1])**3
-        - G * M_VENUS * (vctr_position_earth0[n-1]-vctr_position_venus[n-1])/np.linalg.norm(vctr_position_earth0[n-1]-vctr_position_venus[n-1])**3
-        - G * M_MARS * (vctr_position_earth0[n-1]-vctr_position_mars[n-1])/(np.linalg.norm(vctr_position_earth0[n-1]-vctr_position_mars[n-1])**3)
-        - G * M_JUPITER* (vctr_position_earth0[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_earth0[n-1]-vctr_position_jupiter[n-1])**3)
-        vctr_velocity_earth0[n] = vctr_velocity_earth0[n-1] + vctr_acceleration_earth0[n-1]*dt
-        vctr_position_earth0[n] = vctr_position_earth0[n-1] + vctr_velocity_earth0[n-1]*dt + 0.5*dt**2*vctr_acceleration_earth0[n-1]
-
-
-        vctr_acceleration_venus[n] = (- G * M_SUN * vctr_position_venus[n-1]/np.linalg.norm(vctr_position_venus[n-1])**3
-        - G * M_Rogue* (vctr_position_venus[n-1] - vctr_position_Rogue[n-1])/np.linalg.norm(vctr_position_venus[n-1] - vctr_position_Rogue[n-1])**3)
-        vctr_velocity_venus[n] = vctr_velocity_venus[n-1] + vctr_acceleration_venus[n-1]*dt
-        vctr_position_venus[n] = vctr_position_venus[n-1] + vctr_velocity_venus[n-1]*dt + 0.5*dt**2*vctr_acceleration_venus[n-1]
+            with ProcessPoolExecutor() as executor:
+                future = executor.submit(CalcMercury,n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                        vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                        vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                        M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
         
+            with ProcessPoolExecutor() as executor:
+                    future = executor.submit(CalcJupiter,n, vctr_position_Rogue, vctr_velocity_Rogue, 
+                                            vctr_acceleration_Rogue, vctr_position_earth, vctr_position_venus, 
+                                            vctr_position_mars, vctr_position_mercury, vctr_position_jupiter, 
+                                            M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_Moon, G, dt)
 
-        vctr_acceleration_mars[n] = (-G * M_SUN * vctr_position_mars[n-1]/np.linalg.norm(vctr_position_mars[n-1])**3
-        - G * M_JUPITER* (vctr_position_mars[n-1]-vctr_position_jupiter[n-1])/np.linalg.norm(vctr_position_mars[n-1]-vctr_position_jupiter[n-1])**3
-        - G * M_Rogue* (vctr_position_mars[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_mars[n-1] - vctr_position_Rogue[n-1])**3))
-        vctr_velocity_mars[n] = vctr_velocity_mars[n-1] + vctr_acceleration_mars[n-1]*dt
-        vctr_position_mars[n] = vctr_position_mars[n-1] + vctr_velocity_mars[n-1]*dt + 0.5*dt**2*vctr_acceleration_mars[n-1]
-
-        vctr_acceleration_mercury[n] = (-G * M_SUN * vctr_position_mercury[n-1]/np.linalg.norm(vctr_position_mercury[n-1])**3
-        - G * M_Rogue* (vctr_position_mercury[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_mercury[n-1] - vctr_position_Rogue[n-1])**3))
-        vctr_velocity_mercury[n] = vctr_velocity_mercury[n-1] + vctr_acceleration_mercury[n-1]*dt
-        vctr_position_mercury[n] = vctr_position_mercury[n-1] + vctr_velocity_mercury[n-1]*dt + 0.5*dt**2*vctr_acceleration_mercury[n-1]
-
-        vctr_acceleration_jupiter[n] = (-G * M_SUN * vctr_position_jupiter[n-1]/np.linalg.norm(vctr_position_jupiter[n-1])**3
-        - G * M_SATURN *(vctr_position_jupiter[n-1]-vctr_position_saturn[n-1])/np.linalg.norm(vctr_position_jupiter[n-1]-vctr_position_saturn[n-1])**3
-        - G * M_Rogue * (vctr_position_jupiter[n-1] - vctr_position_Rogue[n-1])/(np.linalg.norm(vctr_position_jupiter[n-1] - vctr_position_Rogue[n-1])**3))
-        vctr_velocity_jupiter[n] = vctr_velocity_jupiter[n-1] + vctr_acceleration_jupiter[n-1]*dt
-        vctr_position_jupiter[n] = vctr_position_jupiter[n-1] + vctr_velocity_jupiter[n-1]*dt + 0.5*dt**2*vctr_acceleration_jupiter[n-1]
 
         # Calculate the current distance between Earth and the Rogue planet
         current_distance_Rogue_Earth = np.linalg.norm(vctr_position_earth[n] - vctr_position_Rogue[n])
@@ -275,6 +335,10 @@ def compute_position(min_distance,min_distance_Rogue_moon,max_distance_Earth_moo
         if Roche_limit_Rogue_Moon_check == False:
             if (current_distance_Rogue_moon < Roche_limit_Rogue_Moon):
                 Roche_limit_Rogue_Moon_check = True
+
+        if Roche_limit_Rogue_Earth_check == False:
+            if (current_distance_Rogue_Earth < Roche_limit_Rogue_Earth):
+                Roche_limit_Rogue_Earth_check = True
 
         # Update min_distance if the current distance is smaller
         if current_distance_Rogue_Earth < min_distance:
@@ -293,281 +357,155 @@ def compute_position(min_distance,min_distance_Rogue_moon,max_distance_Earth_moo
 
            
 
-    def SmallAx():
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot(vctr_position_earth[:, 0], vctr_position_earth[:, 1], vctr_position_earth[:, 2], label='Earth')
-            # Plot the Rogue planet's position
-        ax.plot(vctr_position_Rogue[:, 0], vctr_position_Rogue[:, 1], vctr_position_Rogue[:, 2], label='Rogue Planet', color='brown')
-
-        ax.plot(vctr_position_mars[:, 0], vctr_position_mars[:, 1], vctr_position_mars[:, 2], label='Mars', color='red')
-
-        ax.plot(vctr_position_jupiter[:, 0], vctr_position_jupiter[:, 1], vctr_position_jupiter[:, 2], label='Jupiter', color='tan')
-
-        ax.plot(vctr_position_mercury[:, 0], vctr_position_mercury[:, 1], vctr_position_mercury[:, 2], label='mercury', color='orange')
-
-        ax.plot(vctr_position_venus[:, 0], vctr_position_venus[:, 1], vctr_position_venus[:, 2], label='venus', color='gold')
-
-        ax.plot(vctr_position_moon[:, 0], vctr_position_moon[:, 1], vctr_position_moon[:, 2], label='moon', color='gray')
-
-
-            # Plot the Sun's position
-        ax.scatter(0, 0, 0, color='yellow', s=100, label='Sun')
-
-        # Add starting points 
-        ax.scatter(vctr_position_earth[0, 0], vctr_position_earth[0, 1], vctr_position_earth[0, 2], color='blue', s=50, label='Earth Start')
-        ax.scatter(vctr_position_Rogue[0, 0], vctr_position_Rogue[0, 1], vctr_position_Rogue[0, 2], color='red', s=50, label='Rogue Planet Start')
-        ax.scatter(vctr_position_moon[0, 0], vctr_position_moon[0, 1], vctr_position_moon[0, 2], color='gray', s=50, label='Moon Start')
-
-        ax.set_xlim([0.88*-1e8, 0.87*-1e8])
-        ax.set_ylim([1.245*-1e8, 1.255*-1e8])
-        ax.set_zlim([-1e7, 1e7])
-        # Customize the plot
-        ax.set_xlabel('X Position (km)')           
-        ax.set_ylabel('Y Position (km)')
-        ax.set_zlabel('Z Position (km)')
-        ax.set_title('Solar System and the Rogue Planet Positions Over Time in 3D')
-        ax.legend()
-        ax.grid(True)
-        # If there is no file create one
-        output_dir = "Dataset_P_photos_SmallAx"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        # List the files in the directory
-        existing_files = os.listdir(output_dir)
-
-        # List the files in the directory and filter only .png files
-        existing_files = [f for f in os.listdir(output_dir) if f.endswith('.png')]
-
-            # Create a new photo name
-        plot_number = len(existing_files) + 1
-        file_name = f"plot_{plot_number}.png"
-        file_path = os.path.join(output_dir, file_name)
-
-            # Save the picture
-        plt.savefig(file_path)
-        plt.close()
-
-        SmallAx()
-
-    def BigAx():
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot(vctr_position_earth[:, 0], vctr_position_earth[:, 1], vctr_position_earth[:, 2], label='Earth')
+        def SmallAx():
+            fig = plt.figure(figsize=(10, 10))
+            ax = fig.add_subplot(111, projection='3d')
+            ax.plot(vctr_position_earth[:, 0], vctr_position_earth[:, 1], vctr_position_earth[:, 2], label='Earth')
                 # Plot the Rogue planet's position
-        ax.plot(vctr_position_Rogue[:, 0], vctr_position_Rogue[:, 1], vctr_position_Rogue[:, 2], label='Rogue Planet', color='brown')
+            ax.plot(vctr_position_Rogue[:, 0], vctr_position_Rogue[:, 1], vctr_position_Rogue[:, 2], label='Rogue Planet', color='brown')
 
-        ax.plot(vctr_position_mars[:, 0], vctr_position_mars[:, 1], vctr_position_mars[:, 2], label='Mars', color='red')
+            ax.plot(vctr_position_mars[:, 0], vctr_position_mars[:, 1], vctr_position_mars[:, 2], label='Mars', color='red')
 
-        ax.plot(vctr_position_jupiter[:, 0], vctr_position_jupiter[:, 1], vctr_position_jupiter[:, 2], label='Jupiter', color='tan')
+            ax.plot(vctr_position_jupiter[:, 0], vctr_position_jupiter[:, 1], vctr_position_jupiter[:, 2], label='Jupiter', color='tan')
 
-        ax.plot(vctr_position_mercury[:, 0], vctr_position_mercury[:, 1], vctr_position_mercury[:, 2], label='mercury', color='orange')
+            ax.plot(vctr_position_mercury[:, 0], vctr_position_mercury[:, 1], vctr_position_mercury[:, 2], label='mercury', color='orange')
 
-        ax.plot(vctr_position_venus[:, 0], vctr_position_venus[:, 1], vctr_position_venus[:, 2], label='venus', color='gold')
+            ax.plot(vctr_position_venus[:, 0], vctr_position_venus[:, 1], vctr_position_venus[:, 2], label='venus', color='gold')
 
-        ax.plot(vctr_position_moon[:, 0], vctr_position_moon[:, 1], vctr_position_moon[:, 2], label='moon', color='gray')
+            ax.plot(vctr_position_moon[:, 0], vctr_position_moon[:, 1], vctr_position_moon[:, 2], label='moon', color='gray')
 
 
                 # Plot the Sun's position
-        ax.scatter(0, 0, 0, color='yellow', s=100, label='Sun')
+            ax.scatter(0, 0, 0, color='yellow', s=100, label='Sun')
 
-                # Add starting points 
-        ax.scatter(vctr_position_earth[0, 0], vctr_position_earth[0, 1], vctr_position_earth[0, 2], color='blue', s=50, label='Earth Start')
-        ax.scatter(vctr_position_Rogue[0, 0], vctr_position_Rogue[0, 1], vctr_position_Rogue[0, 2], color='red', s=50, label='Rogue Planet Start')
-        ax.scatter(vctr_position_moon[0, 0], vctr_position_moon[0, 1], vctr_position_moon[0, 2], color='gray', s=50, label='Moon Start')
+            # Add starting points 
+            ax.scatter(vctr_position_earth[0, 0], vctr_position_earth[0, 1], vctr_position_earth[0, 2], color='blue', s=50, label='Earth Start')
+            ax.scatter(vctr_position_Rogue[0, 0], vctr_position_Rogue[0, 1], vctr_position_Rogue[0, 2], color='red', s=50, label='Rogue Planet Start')
+            ax.scatter(vctr_position_moon[0, 0], vctr_position_moon[0, 1], vctr_position_moon[0, 2], color='gray', s=50, label='Moon Start')
 
-
-                # Customize the plot
-        ax.set_xlabel('X Position (km)')
-        ax.set_ylabel('Y Position (km)')
-        ax.set_zlabel('Z Position (km)')         
-        ax.set_title('Solar System and the Rogue Planet Positions Over Time in 3D')
-        ax.legend()
-        ax.grid(True)
+            ax.set_xlim([0.88*-1e8, 0.87*-1e8])
+            ax.set_ylim([1.245*-1e8, 1.255*-1e8])
+            ax.set_zlim([-1e7, 1e7])
+            # Customize the plot
+            ax.set_xlabel('X Position (km)')           
+            ax.set_ylabel('Y Position (km)')
+            ax.set_zlabel('Z Position (km)')
+            ax.set_title('Solar System and the Rogue Planet Positions Over Time in 3D')
+            ax.legend()
+            ax.grid(True)
             # If there is no file create one
-        output_dir = "Dataset_P_photos_BigAx"
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+            output_dir = "Dataset_P_photos_SmallAx"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
 
-                # List the files in the directory
-        existing_files = os.listdir(output_dir)
+            # List the files in the directory
+            existing_files = os.listdir(output_dir)
 
-                # List the files in the directory and filter only .png files
-        existing_files = [f for f in os.listdir(output_dir) if f.endswith('.png')]
+            # List the files in the directory and filter only .png files
+            existing_files = [f for f in os.listdir(output_dir) if f.endswith('.png')]
 
                 # Create a new photo name
-        plot_number = len(existing_files) + 1
-        file_name = f"plot_{plot_number}.png"
-        file_path = os.path.join(output_dir, file_name)
+            plot_number = len(existing_files) + 1
+            file_name = f"plot_{plot_number}.png"
+            file_path = os.path.join(output_dir, file_name)
 
                 # Save the picture
-        plt.savefig(file_path)
-        plt.close()
+            plt.savefig(file_path)
+            plt.close()
 
-    BigAx()
+        SmallAx()
 
-    def AxVid():
-                # Create a figure and axis for the animation
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlim([-4e8, 4e8])
-        ax.set_ylim([-4e8, 4e8])
-        ax.set_zlim([-4e8, 4e8])
-        ax.set_xlabel('X Position (km)')
-        ax.set_ylabel('Y Position (km)')
-        ax.set_zlabel('Z Position (km)')
-        ax.set_title('Motion of Rogue Planet, Earth, Jupiter, and the Sun Over Time')
+        def BigAx():
+            fig = plt.figure(figsize=(10, 10))
+            ax = fig.add_subplot(111, projection='3d')
+            ax.plot(vctr_position_earth[:, 0], vctr_position_earth[:, 1], vctr_position_earth[:, 2], label='Earth')
+                    # Plot the Rogue planet's position
+            ax.plot(vctr_position_Rogue[:, 0], vctr_position_Rogue[:, 1], vctr_position_Rogue[:, 2], label='Rogue Planet', color='brown')
 
-                # Initialize the lines for Earth, Rogue planet, Jupiter, and the Sun
-        line_earth, = ax.plot([], [], [], 'b-', label='Earth')
-        line_rogue, = ax.plot([], [], [], 'r-', label='Rogue Planet')
-        line_jupiter, = ax.plot([], [], [], 'g-', label='Jupiter')
-        line_sun, = ax.plot([], [], [], 'y*', label='Sun', markersize=10)
-        ax.legend()
+            ax.plot(vctr_position_mars[:, 0], vctr_position_mars[:, 1], vctr_position_mars[:, 2], label='Mars', color='red')
 
-        def init():
-            line_earth.set_data([], [])
-            line_earth.set_3d_properties([])
-            line_rogue.set_data([], [])
-            line_rogue.set_3d_properties([])
-            line_jupiter.set_data([], [])
-            line_jupiter.set_3d_properties([])
-            line_sun.set_data([], [])
-            line_sun.set_3d_properties([])
-            return line_earth, line_rogue, line_jupiter, line_sun
+            ax.plot(vctr_position_jupiter[:, 0], vctr_position_jupiter[:, 1], vctr_position_jupiter[:, 2], label='Jupiter', color='tan')
 
-        def update(frame):
-            line_earth.set_data(vctr_position_earth[:frame, 0], vctr_position_earth[:frame, 1])
-            line_earth.set_3d_properties(vctr_position_earth[:frame, 2])
-            line_rogue.set_data(vctr_position_Rogue[:frame, 0], vctr_position_Rogue[:frame, 1])
-            line_rogue.set_3d_properties(vctr_position_Rogue[:frame, 2])
-            line_jupiter.set_data(vctr_position_jupiter[:frame, 0], vctr_position_jupiter[:frame, 1])
-            line_jupiter.set_3d_properties(vctr_position_jupiter[:frame, 2])
-            line_sun.set_data([0], [0])
-            line_sun.set_3d_properties([0])
-            return line_earth, line_rogue, line_jupiter, line_sun
+            ax.plot(vctr_position_mercury[:, 0], vctr_position_mercury[:, 1], vctr_position_mercury[:, 2], label='mercury', color='orange')
 
-        total_frames = 15 * 10  # 15 seconds at 10 fps
+            ax.plot(vctr_position_venus[:, 0], vctr_position_venus[:, 1], vctr_position_venus[:, 2], label='venus', color='gold')
 
-                # Calculate the step size to ensure the whole video is shown from start to finish
-        step_size = len(vctr_position_earth) // total_frames
+            ax.plot(vctr_position_moon[:, 0], vctr_position_moon[:, 1], vctr_position_moon[:, 2], label='moon', color='gray')
 
-                # Create the animation with the calculated step size
-        ani = FuncAnimation(fig, update, frames=range(0, len(vctr_position_earth), step_size), init_func=init, blit=True)
 
-                # Save the animation as a .mov file using the QuickTime (qt) writer
-        ani.save('Dataset_P.mp4', writer='qt', fps=10)
-        plt.show()
+                    # Plot the Sun's position
+            ax.scatter(0, 0, 0, color='yellow', s=100, label='Sun')
+
+                    # Add starting points 
+            ax.scatter(vctr_position_earth[0, 0], vctr_position_earth[0, 1], vctr_position_earth[0, 2], color='blue', s=50, label='Earth Start')
+            ax.scatter(vctr_position_Rogue[0, 0], vctr_position_Rogue[0, 1], vctr_position_Rogue[0, 2], color='red', s=50, label='Rogue Planet Start')
+            ax.scatter(vctr_position_moon[0, 0], vctr_position_moon[0, 1], vctr_position_moon[0, 2], color='gray', s=50, label='Moon Start')
+
+
+                    # Customize the plot
+            ax.set_xlabel('X Position (km)')
+            ax.set_ylabel('Y Position (km)')
+            ax.set_zlabel('Z Position (km)')         
+            ax.set_title('Solar System and the Rogue Planet Positions Over Time in 3D')
+            ax.legend()
+            ax.grid(True)
+            # If there is no file create one
+            output_dir = "Dataset_P_photos_BigAx"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+                    # List the files in the directory
+            existing_files = os.listdir(output_dir)
+
+                    # List the files in the directory and filter only .png files
+            existing_files = [f for f in os.listdir(output_dir) if f.endswith('.png')]
+
+                    # Create a new photo name
+            plot_number = len(existing_files) + 1
+            file_name = f"plot_{plot_number}.png"
+            file_path = os.path.join(output_dir, file_name)
+
+                    # Save the picture
+            plt.savefig(file_path)
+            plt.close()
+
+        BigAx()
 
         
             # Mevcut Excel dosyasının varlığını kontrol et ve oku
-    file_path = 'DATASET_P.xlsx'
+        file_path = 'DATASET_P.xlsx'
 
-    if os.path.exists(file_path):
-        existing_df = pd.read_excel(file_path)
-    else:
-            existing_df = pd.DataFrame()
-            #End time counter
-    end_time = time.perf_counter()
-    new_data = {
-                        'total simulation time(days)':[total_time/86400],
-                        'dt(seconds)':[dt],
-                        'Angle Alpha': [Alpha_Radian],
-                        'Sub' : [sub],
-                        'Rogue planets speed in Z' : [vctr_velocity_Rogue_Z],
-                        'Earth and Rogue min distance': [min_distance],
-                        'Rogue and moon min distance': [min_distance_Rogue_moon],
-                        'Max distance between Earth and moon': [max_distance_Earth_moon],
-                        'Amount earth has deviated because of Rogue': [np.linalg.norm(vctr_position_earth0[n]-vctr_position_earth[n])],
-                        'Roche limit check between Earth and Rogue': [Roche_limit_Rogue_Earth_check],
-                        'Roche limit check between Earth and moon': [Roche_limit_Earth_Moon_check],
-                        'Roche limit check between Rogue and moon': [Roche_limit_Rogue_Moon_check],
+        if os.path.exists(file_path):
+            existing_df = pd.read_excel(file_path)
+        else:
+                existing_df = pd.DataFrame()
+                #End time counter
+        end_time = time.perf_counter()
+        new_data = {
+                            'total simulation time(days)':[total_time/86400],
+                            'dt(seconds)':[dt],
+                            'Earth and Rogue min distance': [min_distance],
+                            'Rogue and moon min distance': [min_distance_Rogue_moon],
+                            'Max distance between Earth and moon': [max_distance_Earth_moon],
+                            'Amount earth has deviated because of Rogue': [np.linalg.norm(vctr_position_earth0[n]-vctr_position_earth[n])],
+                            'Roche limit check between Earth and Rogue': [Roche_limit_Rogue_Earth_check],
+                            'Roche limit check between Earth and moon': [Roche_limit_Earth_Moon_check],
+                            'Roche limit check between Rogue and moon': [Roche_limit_Rogue_Moon_check],
+                            
+                                }
+    
                         
-                            }
-    """'Roche limit check between Earth and Rogue': [Roche_limit_Rogue_Earth_check],
-                        'Roche limit check between Earth and moon': [Roche_limit_Earth_Moon_check],
-                    'Roche limit check between Rogue and moon': [Roche_limit_Rogue_Moon_check],
-                    'Roche limit  between Earth and Rogue': [Roche_limit_Rogue_Earth],
-                        'Roche limit  between Earth and moon': [Roche_limit_Earth_Moon],
-                    'Roche limit  between Rogue and moon': [Roche_limit_Rogue_Moon], """
-                    
-
-   
-    new_df = pd.DataFrame(new_data)
-            # Mevcut verilerle yeni verileri birleştirin
-    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-
-            # Excel dosyasına yaz
-    with pd.ExcelWriter(file_path, engine='openpyxl', mode='w') as writer:
-        combined_df.to_excel(writer, index=False)
-    print("it worked")        
-    last_time = time.perf_counter()
-    elapsed_time = last_time - start_time
-    print(elapsed_time)
-    return min_distance_Rogue_moon, min_distance_Earth_moon , min_distance , max_distance_Earth_moon,sub , vctr_velocity_Rogue_Z 
-
-
-c = int(0)
-Alpha_Radian = 0
-global X_Rogue
-global Y_Rogue
-def CalcD(Alpha_Radian):
-    X_Rogue, Y_Rogue = 0, 0
-    for D in range(1, 2):
-        X_Rogue,Y_Rogue = CalcS(X_Rogue,Y_Rogue)
-        Alpha_degree = 0 + D*90
-        Alpha_Radian = math.radians(Alpha_degree)
-    return Alpha_Radian
-def CalcS(X_Rogue,Y_Rogue):
-    Alpha_Radian = 0
-    min_distance_Rogue_moon = float('inf')
-    min_distance = float('inf')
-    min_distance_Earth_moon = float('inf')
-    max_distance_Earth_moon = float(0)
-
-    for S in range(1, 2):
-
-        sub = 0.5E+06 + (S * 0.5E+06)
-        X_sub = float(sub*math.sin(Alpha_Radian))
-        Y_sub = float(sub*math.cos(Alpha_Radian))
-
-        X_Rogue = X_Earth + X_sub 
-        Y_Rogue = Y_Earth + Y_sub
-        CalcV(vctr_position_Rogue, vctr_velocity_Rogue, vctr_velocity_Rogue_Z, sub,min_distance, min_distance_Rogue_moon,max_distance_Earth_moon, min_distance_Earth_moon,X_Rogue,Y_Rogue)
-
-    return X_Rogue,Y_Rogue
-def CalcV(vctr_position_Rogue,vctr_velocity_Rogue, vctr_velocity_Rogue_Z, sub, min_distance,min_distance_Rogue_moon,max_distance_Earth_moon,min_distance_Earth_moon,X_Rogue,Y_Rogue):
-    
-    c = 0
-    for V in range(1 , 2):
-         
-        print(f"Percent calculated:{c/1600*100}")
-        c += 1
-        vctr_velocity_Rogue_Z = -10 -V*10 
-        vctr_position_Rogue[0] = np.array([X_Rogue, Y_Rogue, 1e+06]) 
-        vctr_velocity_Rogue[0] = np.array([0, 0, vctr_velocity_Rogue_Z])
-
-        min_distance_Rogue_moon_global, min_distance_Earth_moon , min_distance , max_distance_Earth_moon,sub , vctr_velocity_Rogue_Z = compute_position( 
-                    min_distance,min_distance_Rogue_moon,max_distance_Earth_moon,
-                    sub,total_time, dt, G, M_SUN, M_earth, M_VENUS, M_MARS, M_mercury, M_JUPITER, M_SATURN, M_NEPTUNE, M_URANUS, M_Rogue, M_Moon,
-                    vctr_position_moon, vctr_velocity_moon, vctr_acceleration_moon, 
-                    vctr_position_Rogue, vctr_velocity_Rogue, vctr_acceleration_Rogue, 
-                    vctr_position_earth, vctr_velocity_earth, vctr_acceleration_earth,
-                    vctr_position_venus, vctr_velocity_venus, vctr_acceleration_venus,
-                    vctr_position_mars, vctr_velocity_mars, vctr_acceleration_mars,
-                    vctr_position_mercury, vctr_velocity_mercury, vctr_acceleration_mercury,
-                    vctr_position_jupiter, vctr_velocity_jupiter, vctr_acceleration_jupiter,
-                    vctr_position_saturn, vctr_velocity_saturn, vctr_acceleration_saturn,
-                    vctr_position_neptune, vctr_velocity_neptune, vctr_acceleration_neptune,
-                    vctr_position_uranus, vctr_velocity_uranus, vctr_acceleration_uranus,
-                    vctr_position_earth0, vctr_velocity_earth0, vctr_acceleration_earth0,
-                    Roche_limit_Rogue_Moon_check,Roche_limit_Earth_Moon_check ,Roche_limit_Rogue_Earth_check,
-                    Roche_limit_Rogue_Moon, Roche_limit_Earth_Moon, Roche_limit_Rogue_Earth, vctr_velocity_Rogue_Z
-                                    )
 
     
-    return vctr_position_Rogue,vctr_velocity_Rogue, vctr_velocity_Rogue_Z ,sub, min_distance_Rogue_moon_global,max_distance_Earth_moon, min_distance_Earth_moon,X_Rogue,Y_Rogue
+        new_df = pd.DataFrame(new_data)
+                # Mevcut verilerle yeni verileri birleştirin
+        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
 
-CalcD(Alpha_Radian)
-
+                # Excel dosyasına yaz
+        with pd.ExcelWriter(file_path, engine='openpyxl', mode='w') as writer:
+            combined_df.to_excel(writer, index=False)
+print("it worked")        
+last_time = time.perf_counter()
+elapsed_time = last_time - start_time
+print(elapsed_time)
+    
