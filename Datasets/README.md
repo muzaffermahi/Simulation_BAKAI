@@ -4,4 +4,5 @@ rogue planet and the Earth, which can be useful if you're into that kind of stuf
 when the magnitude of the Subtraction Vector is between 10^5 and 10^6 km with 5 * 10^4 km intervals, and the BC3
 is recorded when the magnitude of the Subtraction Vector is between 10^6 and 10^7 km with 5 * 10^5 km. To be honest
 the datasets and other codes look very messy, so if you have any questions you can mail me, since it's impossible to 
-understand some stupid things I did. muzaffermahican@gmail.com . Look I'm sorry alright it's complicated :D
+understand some stupid things I did. muzaffermahican@gmail.com . By the way, in the paper I refered to BC 3.1 as BC1 and BC3 as BC2. 
+Look I'm sorry alright it's complicated :D
